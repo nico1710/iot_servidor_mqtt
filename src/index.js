@@ -2,6 +2,7 @@ import mqtt from "mqtt";
 import http from "http";
 import express from "express";
 import { Server } from "socket.io";
+import axios from "axios";
 
 const app = express();
 const server = http.createServer(app);
@@ -34,9 +35,30 @@ io.on("connection", (socket) => {
     );
   });
 
-  client.on("message", (receivedTopic, message) => {
+  client.on("message", async (receivedTopic, message) => {
     console.log(receivedTopic);
-    console.log("Mensaje recibido:", message.toString());
+    const data = JSON.parse(message.toString());
+    console.log(data);
+    const { client } = data;
+    // send email
+    if (client.value > 15) {
+      const email = "n.gomez03@ufromail.cl";
+      try {
+        const response = await axios.post(
+          "https://exchangebooks-notification.onrender.com/email",
+          {
+            email,
+            subject: "Alerta de Robo",
+            text: `El valor de tu alarma es ${client.value}`,
+          }
+        );
+        if (response.status === 200) {
+          console.log(`Correo enviado a ${email}`);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    }
 
     socket.emit("message", message.toString());
   });
